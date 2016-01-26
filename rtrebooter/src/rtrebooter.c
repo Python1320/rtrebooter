@@ -13,16 +13,16 @@ TODO: assumes single phy device
 #include <sys/klog.h>
 #include <sys/syslog.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <signal.h>
 #include <sys/sysinfo.h>
 #include <ctype.h>
 #include <time.h>
 #include <sys/mman.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-#include <sys/types.h>
 #include <string.h>
 #include <linux/fs.h>
 
@@ -33,6 +33,62 @@ TODO: assumes single phy device
 #ifdef DEBUG
 	#include <assert.h>
 #endif
+
+
+#include <syslog.h>
+
+static void daemonize()
+{
+	pid_t pid;
+
+
+	pid = fork();
+
+
+	if (pid < 0)
+		exit(EXIT_FAILURE);
+
+
+	if (pid > 0)
+		exit(EXIT_SUCCESS);
+
+
+	if (setsid() < 0)
+		exit(EXIT_FAILURE);
+
+
+	signal(SIGCHLD, SIG_IGN);
+	signal(SIGHUP, SIG_IGN);
+
+
+	pid = fork();
+
+
+	if (pid < 0)
+		exit(EXIT_FAILURE);
+
+
+	if (pid > 0)
+		exit(EXIT_SUCCESS);
+
+
+	umask(0);
+
+
+
+	chdir("/");
+
+
+	int x;
+	for (x = sysconf(_SC_OPEN_MAX); x>0; x--)
+	{
+		close (x);
+	}
+
+
+	openlog ("rtrebooter", LOG_PID, LOG_DAEMON);
+}
+
 
 static ssize_t read_kmsg_one(int kmsg, char * kmsg_buf, int kmsg_buf_sz )
 {
@@ -51,7 +107,9 @@ void RebootWifi(int kmsg, char * kmsg_buf, int kmsg_buf_sz) {
 	int oldfl;
 	ssize_t sz;
 	
-	system("/root/wifireboot 0");
+	syslog (LOG_NOTICE, "Detected WiFi malfunction, rebooting");
+	
+	system("/usr/sbin/wifireboot 0");
 	
 	// empty kmsg buffer after reboot
 	
@@ -77,7 +135,11 @@ void RebootWifi(int kmsg, char * kmsg_buf, int kmsg_buf_sz) {
 	
 	// now we are ready to receive new bad messages
 	
-	system("/root/wifireboot 1");
+	syslog (LOG_NOTICE, "Turning WiFi back up");
+	
+	system("/usr/sbin/wifireboot 1");
+	
+	syslog (LOG_NOTICE, "Monitoring again...");
 	
 }
 
@@ -93,6 +155,11 @@ int main(void)
 	char * kmsg_buf_offset,kmsg_buf_offset2;
 	const char findstr1[] = "DEVICE=+ieee80211:";
 	const char findstr2[] = "\n SUBSYSTEM=ieee80211\n";
+
+#ifndef DEBUG 
+	daemonize();
+	syslog (LOG_NOTICE, "Starting up...");
+#endif
 
 #ifdef DEBUG
 	assert(MINMSG>(sizeof_str(findstr2)+sizeof_str(findstr1)+46));
@@ -113,6 +180,7 @@ int main(void)
 		return 2;
 	}	
 	
+	syslog (LOG_NOTICE, "Started.");
 	
 	while (1) {
 		
@@ -207,6 +275,8 @@ int main(void)
 		
 
 	}
+	
+	syslog (LOG_NOTICE, "Terminating.");
 	
 	return 0;
 }
