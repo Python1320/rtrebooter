@@ -2,8 +2,14 @@
 rtrebooter
 ==========
 
+BECAUSE NOTHING IS WORSE THAN A ZOMBIE ACCESS POINT THAT LETS YOU CONNECT BUT NOT RECEIVE DATA.
 
-A sad fix for WiFi dying on Arv7510pw:
+https://dev.openwrt.org/ticket/14744
+
+https://dev.openwrt.org/ticket/17556
+
+
+A sad fix for WiFi dying on Arv7510pw
 
 ```
 rt2x00queue_write_tx_frame: Error - Dropping frame due to full tx queue 2
