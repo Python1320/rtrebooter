@@ -1,22 +1,19 @@
-#
-# Copyright (C) 2011-2014 OpenWrt.org
-#
-# This is free software, licensed under the GNU General Public License v2.
-# See /LICENSE for more information.
-#
-
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=rtrebooter
-PKG_RELEASE:=1
+PKG_VERSION:=1.2
+PKG_RELEASE:=3
 
+
+PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)
 include $(INCLUDE_DIR)/package.mk
+
 
 define Package/rtrebooter
   SECTION:=utils
   CATEGORY:=Utilities
   TITLE:=Utility to reboot wifi on ARV7510PW
-  MAINTAINER:=Python1320 <python1320@example.com>
+  MAINTAINER:=Python1320 <python1320+rtreboot@gmail.com>
 endef
 
 define Package/rtrebooter/description
@@ -25,19 +22,33 @@ define Package/rtrebooter/description
  crashes.
 endef
 
-define Build/Prepare
-	$(INSTALL_DIR) $(PKG_BUILD_DIR)
-	$(INSTALL_DATA) ./src/rtrebooter.c $(PKG_BUILD_DIR)/
+define Build/Configure
 endef
 
 define Build/Compile
-	$(TARGET_CC) $(TARGET_CFLAGS) -Wall \
-		-o $(PKG_BUILD_DIR)/rtrebooter $(PKG_BUILD_DIR)/rtrebooter.c
+	$(MAKE) -C $(PKG_BUILD_DIR) \
+		CC="$(TARGET_CC)" \
+		CFLAGS="$(TARGET_CFLAGS) -Wall" \
+		LDFLAGS="$(TARGET_LDFLAGS)"
+endef
+
+define Build/Prepare
+	mkdir -p $(PKG_BUILD_DIR)
+	$(CP) ./src/* $(PKG_BUILD_DIR)/
 endef
 
 define Package/rtrebooter/install
-	$(INSTALL_DIR) $(1)/usr/bin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/rtrebooter $(1)/usr/bin/
+
+	$(INSTALL_DIR) $(1)/usr/sbin/
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/rtrebooter $(1)/usr/sbin/
+	$(INSTALL_BIN) files/wifireboot.sh $(1)/usr/sbin/wifireboot
+
+	$(INSTALL_DIR) $(1)/etc/init.d/
+	$(INSTALL_BIN) files/rtrebooter.init $(1)/etc/init.d/rtrebooter
+
+	$(INSTALL_DIR) $(1)/etc/config
+	$(INSTALL_CONF) files/rtrebooter.config $(1)/etc/config/rtrebooter
+	
 endef
 
 $(eval $(call BuildPackage,rtrebooter))
